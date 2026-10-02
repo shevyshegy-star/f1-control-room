@@ -25,7 +25,7 @@ header, footer, #MainMenu {visibility: hidden;}
 @st.cache_resource(show_spinner="Loading session data...")
 def load_session(year, gp, ses):
     s = fastf1.get_session(year, gp, ses)
-    s.load()
+    s.load(telemetry=True, laps=True, weather=False, messages=False)
     return s
 
 
@@ -48,7 +48,16 @@ except Exception as e:
     st.error(f"Could not load session: {e}")
     st.stop()
 
-drivers = sorted(session.laps["Driver"].unique())
+try:
+    laps_data = session.laps
+    if laps_data is None or laps_data.empty:
+        st.error("Session laps data is empty.")
+        st.stop()
+    drivers = sorted(laps_data["Driver"].unique())
+except Exception as e:
+    st.error(f"Error reading drivers list: {e}")
+    st.stop()
+
 mode = st.sidebar.radio("View", ["Head to Head", "Multi-Driver Hub"])
 
 if mode == "Head to Head":
@@ -70,7 +79,7 @@ with left:
     res = session.results[["Position", "Abbreviation", "TeamName"]].copy()
     res.columns = ["Pos", "Driver", "Team"]
     res["Pos"] = res["Pos"].astype("Int64")
-    best = session.laps.groupby("Driver")["LapTime"].min()
+    best = laps_data.groupby("Driver")["LapTime"].min()
     res["Best Lap"] = res["Driver"].map(best).map(fmt)
     st.dataframe(res, width="stretch", hide_index=True, height=620)
 
@@ -86,7 +95,7 @@ with right:
         fig.patch.set_facecolor("#0b0b10")
         for drv in chosen:
             try:
-                lap = session.laps.pick_drivers(drv).pick_fastest()
+                lap = laps_data.pick_drivers(drv).pick_fastest()
                 tel = lap.get_car_data().add_distance()
                 try:
                     color = fastf1.plotting.get_driver_color(drv, session)
