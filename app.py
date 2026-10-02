@@ -25,7 +25,7 @@ header, footer, #MainMenu {visibility: hidden;}
 @st.cache_resource(show_spinner="Loading session data...")
 def load_session(year, gp, ses):
     s = fastf1.get_session(year, gp, ses)
-    s.load(telemetry=True, laps=True, weather=False, messages=False)
+    s.load()
     return s
 
 
@@ -46,10 +46,6 @@ try:
     session = load_session(int(year), gp, ses)
 except Exception as e:
     st.error(f"Could not load session: {e}")
-    st.stop()
-
-if session.laps is None or session.laps.empty:
-    st.warning("No timing data available for this session.")
     st.stop()
 
 drivers = sorted(session.laps["Driver"].unique())
